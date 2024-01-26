@@ -81,6 +81,16 @@ Y_UNIT_TEST_SUITE(TMiniKQLTypeOps) {
         }
     }
 
+    Y_UNIT_TEST(IntervalFromToString) {
+        for (i64 v = -NUdf::MAX_TIMESTAMP + 1; v < (i64)NUdf::MAX_TIMESTAMP; ++v) {
+            const auto str = ValueToString(NUdf::EDataSlot::Interval, NUdf::TUnboxedValuePod(v));
+            UNIT_ASSERT(str.HasValue());
+            auto vv = ValueFromString(NUdf::EDataSlot::Interval, str.AsStringRef());
+            UNIT_ASSERT(vv.HasValue());
+            UNIT_ASSERT_EQUAL(v, vv.Get<i64>());
+        }
+    }
+
     Y_UNIT_TEST(DateInOut) {
         ui32 year = 1970;
         ui32 month = 1;
