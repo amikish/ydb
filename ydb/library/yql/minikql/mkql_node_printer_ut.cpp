@@ -79,6 +79,29 @@ namespace {
         structBuilder.Add("44", TRuntimeNode(TBlockType::Create(dtype1, TBlockType::EShape::Scalar, env), true));
         structBuilder.Add("45", TRuntimeNode(TBlockType::Create(dtype2, TBlockType::EShape::Many, env), true));
         structBuilder.Add("46", TRuntimeNode(TPgType::Create(23, env), true)); // int4 type
+
+        i32 minusOne32 = -1;
+        structBuilder.Add("47", TRuntimeNode(TDataLiteral::Create(
+                        NUdf::TUnboxedValuePod(minusOne32),
+                        TDataType::Create(NUdf::TDataType<NUdf::TDate32>::Id, env),
+                        env),
+                    true));
+        i64 minusOne64 = -1;
+        structBuilder.Add("48", TRuntimeNode(TDataLiteral::Create(
+                        NUdf::TUnboxedValuePod(minusOne64),
+                        TDataType::Create(NUdf::TDataType<NUdf::TDatetime64>::Id, env),
+                        env),
+                    true));
+        structBuilder.Add("49", TRuntimeNode(TDataLiteral::Create(
+                        NUdf::TUnboxedValuePod(minusOne64),
+                        TDataType::Create(NUdf::TDataType<NUdf::TTimestamp64>::Id, env),
+                        env),
+                    true));
+        structBuilder.Add("50", TRuntimeNode(TDataLiteral::Create(
+                        NUdf::TUnboxedValuePod(minusOne64),
+                        TDataType::Create(NUdf::TDataType<NUdf::TInterval64>::Id, env),
+                        env),
+                    true));
         return structBuilder.Build();
     }
 }
@@ -89,12 +112,15 @@ Y_UNIT_TEST_SUITE(TMiniKQLNodePrinterTest) {
         TTypeEnvironment env(alloc);
         auto node = BuildGraph(env);
         TString s = PrintNode(node);
-        //Cout << s << Endl;
 
         auto serialized = SerializeNode(node, env);
         TNode* node2 = DeserializeNode(serialized, env);
         TString s2 = PrintNode(node2, false);
         UNIT_ASSERT_EQUAL(s2, s);
+    }
+
+    Y_UNIT_TEST(BigdateSerialization) {
+        // TODO de/serialize literal values
     }
 
     Y_UNIT_TEST(RuntimeNodeSerialization) {

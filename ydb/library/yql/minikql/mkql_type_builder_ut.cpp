@@ -317,6 +317,22 @@ private:
             UNIT_ASSERT_VALUES_EQUAL(s, "Interval");
         }
         {
+            auto s = FormatType(FunctionTypeInfoBuilder.SimpleType<NUdf::TDate32>());
+            UNIT_ASSERT_VALUES_EQUAL(s, "Date32");
+        }
+        {
+            auto s = FormatType(FunctionTypeInfoBuilder.SimpleType<NUdf::TDatetime64>());
+            UNIT_ASSERT_VALUES_EQUAL(s, "Datetime64");
+        }
+        {
+            auto s = FormatType(FunctionTypeInfoBuilder.SimpleType<NUdf::TTimestamp64>());
+            UNIT_ASSERT_VALUES_EQUAL(s, "Timestamp64");
+        }
+        {
+            auto s = FormatType(FunctionTypeInfoBuilder.SimpleType<NUdf::TInterval64>());
+            UNIT_ASSERT_VALUES_EQUAL(s, "Interval64");
+        }
+        {
             auto s = FormatType(FunctionTypeInfoBuilder.SimpleType<NUdf::TTzDate>());
             UNIT_ASSERT_VALUES_EQUAL(s, "TzDate");
         }
