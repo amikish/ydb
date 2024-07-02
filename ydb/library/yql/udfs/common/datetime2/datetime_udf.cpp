@@ -2,6 +2,7 @@
 #include <ydb/library/yql/public/udf/tz/udf_tz.h>
 #include <ydb/library/yql/public/udf/udf_helpers.h>
 #include <ydb/library/yql/minikql/datetime/datetime.h>
+#include <ydb/library/yql/minikql/datetime/datetime64.h>
 
 #include <ydb/library/yql/public/udf/arrow/udf_arrow_helpers.h>
 
@@ -12,6 +13,7 @@ using namespace NUdf;
 using namespace NYql::DateTime;
 
 extern const char SplitName[] = "Split";
+extern const char Split64Name[] = "Split64";
 extern const char ToSecondsName[] = "ToSeconds";
 extern const char ToMillisecondsName[] = "ToMilliseconds";
 extern const char ToMicrosecondsName[] = "ToMicroseconds";
@@ -22,6 +24,7 @@ extern const char GetMillisecondOfSecondName[] = "GetMillisecondOfSecond";
 extern const char GetMicrosecondOfSecondName[] = "GetMicrosecondOfSecond";
 
 extern const char TMResourceName[] = "DateTime2.TM";
+extern const char TM64ResourceName[] = "DateTime2.TM64";
 
 const auto UsecondsInDay = 86400000000ll;
 const auto UsecondsInHour = 3600000000ll;
@@ -389,6 +392,15 @@ TTMStorage& Reference(NUdf::TUnboxedValuePod& value) {
     return *reinterpret_cast<TTMStorage*>(value.GetRawPtr());
 }
 
+/* TODO
+const TTM64Storage& Reference64(const NUdf::TUnboxedValuePod& value) {
+    return *reinterpret_cast<const TTM64Storage*>(value.GetRawPtr());
+}
+*/
+TTM64Storage& Reference64(NUdf::TUnboxedValuePod& value) {
+    return *reinterpret_cast<TTM64Storage*>(value.GetRawPtr());
+}
+
 NUdf::TUnboxedValuePod DoAddMonths(const NUdf::TUnboxedValuePod& date, i64 months, const NUdf::IDateBuilder& builder) {
     auto result = date;
     auto& storage = Reference(result);
@@ -534,12 +546,12 @@ NUdf::TUnboxedValuePod DoAddYears(const NUdf::TUnboxedValuePod& date, i64 years,
 
     // Split
 
-    template <typename TUserDataType>
-    class TSplit : public TBoxedValue {
+    template <const char* ResourceName, size_t ResourceSize, typename TUserDataType>
+    class TSplitBase : public TBoxedValue {
         const TSourcePosition Pos_;
 
     public:
-        explicit TSplit(TSourcePosition pos)
+        explicit TSplitBase(TSourcePosition pos)
             : Pos_(pos)
         {}
 
@@ -554,14 +566,22 @@ NUdf::TUnboxedValuePod DoAddYears(const NUdf::TUnboxedValuePod& date, i64 years,
         {
             builder.UserType(userType);
             builder.Args()->Add<TUserDataType>().Flags(ICallablePayload::TArgumentFlags::AutoMap);
-            builder.Returns(builder.Resource(TMResourceName));
+            // builder.Returns(builder.Resource(TStringRef(ResourceName, sizeof(ResourceName))));
+            builder.Returns(builder.Resource(TStringRef(ResourceName, ResourceSize - 1)));
             builder.IsStrict();
 
             if (!typesOnly) {
-                builder.Implementation(new TSplit<TUserDataType>(builder.GetSourcePosition()));
+                builder.Implementation(
+                    new TSplitBase<ResourceName, ResourceSize, TUserDataType>(builder.GetSourcePosition()));
             }
         }
     };
+
+    template <typename TUserDataType>
+    using TSplit = TSplitBase<TMResourceName, sizeof(TMResourceName), TUserDataType>;
+
+    template <typename TUserDataType>
+    using TSplit64 = TSplitBase<TM64ResourceName, sizeof(TM64ResourceName), TUserDataType>;
 
     template <>
     TUnboxedValue TSplit<TDate>::Run(
@@ -575,6 +595,23 @@ NUdf::TUnboxedValuePod DoAddYears(const NUdf::TUnboxedValuePod& date, i64 years,
             TUnboxedValuePod result(0);
             auto& storage = Reference(result);
             storage.FromDate(builder, args[0].Get<ui16>());
+            return result;
+        } catch (const std::exception& e) {
+            UdfTerminate((TStringBuilder() << Pos_ << " " << e.what()).data());
+        }
+    }
+
+    template <>
+    TUnboxedValue TSplit64<TDate32>::Run(
+        const IValueBuilder*,
+        const TUnboxedValuePod* args) const
+    {
+        try {
+            EMPTY_RESULT_ON_EMPTY_ARG(0);
+
+            TUnboxedValuePod result(0);
+            auto& storage = Reference64(result);
+            storage.FromDate32(args[0].Get<i32>());
             return result;
         } catch (const std::exception& e) {
             UdfTerminate((TStringBuilder() << Pos_ << " " << e.what()).data());
@@ -1830,7 +1867,8 @@ NUdf::TUnboxedValuePod DoAddYears(const NUdf::TUnboxedValuePod& date, i64 years,
             TTzDate,
             TTzDatetime,
             TTzTimestamp>,
-
+        TUserDataTypeFuncFactory<true, Split64Name, TSplit64,
+            TDate32>, // TODO add others
         TMakeDate,
         TMakeDatetime,
         TMakeTimestamp,
