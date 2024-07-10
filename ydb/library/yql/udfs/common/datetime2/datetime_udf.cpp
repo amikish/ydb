@@ -392,11 +392,10 @@ TTMStorage& Reference(NUdf::TUnboxedValuePod& value) {
     return *reinterpret_cast<TTMStorage*>(value.GetRawPtr());
 }
 
-/* TODO
 const TTM64Storage& Reference64(const NUdf::TUnboxedValuePod& value) {
     return *reinterpret_cast<const TTM64Storage*>(value.GetRawPtr());
 }
-*/
+
 TTM64Storage& Reference64(NUdf::TUnboxedValuePod& value) {
     return *reinterpret_cast<TTM64Storage*>(value.GetRawPtr());
 }
@@ -714,6 +713,12 @@ NUdf::TUnboxedValuePod DoAddYears(const NUdf::TUnboxedValuePod& date, i64 years,
         auto& builder = valueBuilder->GetDateBuilder();
         auto& storage = Reference(args[0]);
         return TUnboxedValuePod(storage.ToDate(builder, false));
+    }
+
+    SIMPLE_STRICT_UDF(TMakeDate32, TDate32(TAutoMap<TResource<TM64ResourceName>>)) {
+        valueBuilder->GetDateBuilder(); // TODO
+        auto& storage = Reference64(args[0]);
+        return TUnboxedValuePod(storage.ToDate32());
     }
 
     SIMPLE_STRICT_UDF(TMakeDatetime, TDatetime(TAutoMap<TResource<TMResourceName>>)) {
@@ -1869,12 +1874,15 @@ NUdf::TUnboxedValuePod DoAddYears(const NUdf::TUnboxedValuePod& date, i64 years,
             TTzTimestamp>,
         TUserDataTypeFuncFactory<true, Split64Name, TSplit64,
             TDate32>, // TODO add others
+
         TMakeDate,
         TMakeDatetime,
         TMakeTimestamp,
         TMakeTzDate,
         TMakeTzDatetime,
         TMakeTzTimestamp,
+
+        TMakeDate32,
 
         TGetYear,
         TGetDayOfYear,
