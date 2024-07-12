@@ -230,6 +230,7 @@ namespace NUdf {
 namespace NYql {
 namespace NUdf {
 
+    // TODO support bigtypes here for different output type
 template<bool CheckOptional, const char* TFuncName, template<class> class TFunc, typename... TUserTypes>
 class TUserDataTypeFuncFactory : public ::NYql::NUdf::TBoxedValue {
 public:
